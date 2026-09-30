@@ -1,0 +1,24 @@
+{
+  "name": "tugas1-restful-2428240090",
+  "version": "1.0.0",
+  "description": "RESTful API Utilitas Tagihan Listrik - Tugas 1 PAW2 SI5B",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
+  "keywords": [
+    "express",
+    "restful-api",
+    "electricity-bills",
+    "si5b"
+  ],
+  "author": "Ewaldo Suhendra Kohar",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}

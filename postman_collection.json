@@ -1,0 +1,215 @@
+{
+  "info": {
+    "_postman_id": "c1f7b029-9e5c-4c4f-a728-electricitybills",
+    "name": "Tugas 1 - Utilitas Tagihan Listrik API (2428240090)",
+    "description": "Koleksi Postman untuk pengujian RESTful API Utilitas Tagihan Listrik (/electricity-bills) - Tugas 1 PAW2 SI5B oleh Ewaldo Suhendra Kohar (2428240090).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Info API (GET /)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/",
+          "host": ["{{baseUrl}}"],
+          "path": [""]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "1. Ambil Semua Data (GET /electricity-bills)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/electricity-bills",
+          "host": ["{{baseUrl}}"],
+          "path": ["electricity-bills"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "2. Filter Golongan (GET /electricity-bills?golongan=R1-900VA)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/electricity-bills?golongan=R1-900VA",
+          "host": ["{{baseUrl}}"],
+          "path": ["electricity-bills"],
+          "query": [
+            {
+              "key": "golongan",
+              "value": "R1-900VA"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "3. Ambil Satu Data Sukses (GET /electricity-bills/1)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/electricity-bills/1",
+          "host": ["{{baseUrl}}"],
+          "path": ["electricity-bills", "1"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "4. Ambil Satu Data Gagal 404 (GET /electricity-bills/99)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/electricity-bills/99",
+          "host": ["{{baseUrl}}"],
+          "path": ["electricity-bills", "99"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "5. Tambah Data Sukses 201 (POST /electricity-bills)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nomorPelanggan\": \"512033445566\",\n  \"namaPelanggan\": \"Fajar Pratama\",\n  \"golongan\": \"R1-900VA\",\n  \"bulan\": \"Februari 2025\",\n  \"pemakaianKwh\": 135,\n  \"totalTagihan\": 182250,\n  \"status\": \"Belum Lunas\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/electricity-bills",
+          "host": ["{{baseUrl}}"],
+          "path": ["electricity-bills"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "6. Tambah Data Gagal 400 - Field Kosong (POST /electricity-bills)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"namaPelanggan\": \"Data Tanpa Field Lengkap\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/electricity-bills",
+          "host": ["{{baseUrl}}"],
+          "path": ["electricity-bills"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "7. Ubah Data Penuh Sukses 200 (PUT /electricity-bills/1)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nomorPelanggan\": \"512019827364\",\n  \"namaPelanggan\": \"Budi Santoso (Updated)\",\n  \"golongan\": \"R1-1300VA\",\n  \"bulan\": \"Januari 2025\",\n  \"pemakaianKwh\": 150,\n  \"totalTagihan\": 216600,\n  \"status\": \"Lunas\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/electricity-bills/1",
+          "host": ["{{baseUrl}}"],
+          "path": ["electricity-bills", "1"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "8. Ubah Data Gagal 404 (PUT /electricity-bills/99)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nomorPelanggan\": \"512019827364\",\n  \"namaPelanggan\": \"Tidak Ada\",\n  \"golongan\": \"R1-900VA\",\n  \"bulan\": \"Januari 2025\",\n  \"pemakaianKwh\": 100,\n  \"totalTagihan\": 135000,\n  \"status\": \"Lunas\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/electricity-bills/99",
+          "host": ["{{baseUrl}}"],
+          "path": ["electricity-bills", "99"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "9. Hapus Data Sukses 200 (DELETE /electricity-bills/2)",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/electricity-bills/2",
+          "host": ["{{baseUrl}}"],
+          "path": ["electricity-bills", "2"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "10. Hapus Data Gagal 404 (DELETE /electricity-bills/99)",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/electricity-bills/99",
+          "host": ["{{baseUrl}}"],
+          "path": ["electricity-bills", "99"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "11. Route Tidak Dikenal 404 (GET /rute-ngawur)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/rute-ngawur",
+          "host": ["{{baseUrl}}"],
+          "path": ["rute-ngawur"]
+        }
+      },
+      "response": []
+    }
+  ]
+}
