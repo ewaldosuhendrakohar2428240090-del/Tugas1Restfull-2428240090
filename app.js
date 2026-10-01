@@ -21,43 +21,27 @@ app.use(express.json());
 let electricityBills = [
   {
     id: 1,
-    nomorPelanggan: '512019827364',
-    namaPelanggan: 'Budi Santoso',
-    golongan: 'R1-900VA',
-    bulan: 'Januari 2025',
-    pemakaianKwh: 125,
-    totalTagihan: 168750,
-    status: 'Lunas'
+    idPelanggan: '171234567890',
+    nama: 'Yudi Pratama',
+    golongan: 'R1',
+    pemakaianKwh: 210,
+    totalTagihan: 303000
   },
   {
     id: 2,
-    nomorPelanggan: '512088374612',
-    namaPelanggan: 'Siti Rahmawati',
-    golongan: 'R1-1300VA',
-    bulan: 'Januari 2025',
-    pemakaianKwh: 240,
-    totalTagihan: 346560,
-    status: 'Belum Lunas'
+    idPelanggan: '171234567891',
+    nama: 'Andi Setiawan',
+    golongan: 'R2',
+    pemakaianKwh: 150,
+    totalTagihan: 210000
   },
   {
     id: 3,
-    nomorPelanggan: '512044918233',
-    namaPelanggan: 'Hendro Wijaya',
-    golongan: 'R1-900VA',
-    bulan: 'Januari 2025',
-    pemakaianKwh: 180,
-    totalTagihan: 243000,
-    status: 'Lunas'
-  },
-  {
-    id: 4,
-    nomorPelanggan: '512077123901',
-    namaPelanggan: 'Dewi Lestari',
-    golongan: 'B1-4500VA',
-    bulan: 'Januari 2025',
-    pemakaianKwh: 450,
-    totalTagihan: 675000,
-    status: 'Belum Lunas'
+    idPelanggan: '171234567892',
+    nama: 'Budi Santoso',
+    golongan: 'R1',
+    pemakaianKwh: 300,
+    totalTagihan: 450000
   }
 ];
 
@@ -122,34 +106,30 @@ app.post('/electricity-bills', (req, res) => {
 
   // Validasi seluruh field wajib topik
   if (
-    !nomorPelanggan ||
-    !namaPelanggan ||
+    !idPelanggan ||
+    !nama ||
     !golongan ||
-    !bulan ||
     pemakaianKwh === undefined ||
     pemakaianKwh === null ||
     pemakaianKwh === '' ||
     totalTagihan === undefined ||
     totalTagihan === null ||
-    totalTagihan === '' ||
-    !status
+    totalTagihan === ''
   ) {
     return res.status(400).json({
       status: 'error',
-      message: 'Semua field wajib diisi: nomorPelanggan, namaPelanggan, golongan, bulan, pemakaianKwh, totalTagihan, status',
+      message: 'Semua field wajib diisi: idPelanggan, nama, golongan, pemakaianKwh, totalTagihan',
       data: null
     });
   }
 
   const baru = {
     id: nextId++,
-    nomorPelanggan: String(nomorPelanggan),
-    namaPelanggan: String(namaPelanggan),
+    idPelanggan: String(idPelanggan),
+    nama: String(nama),
     golongan: String(golongan),
-    bulan: String(bulan),
     pemakaianKwh: Number(pemakaianKwh),
-    totalTagihan: Number(totalTagihan),
-    status: String(status)
+    totalTagihan: Number(totalTagihan)
   };
 
   electricityBills.push(baru);
@@ -186,17 +166,15 @@ app.put('/electricity-bills/:id', (req, res) => {
   } = req.body;
 
   if (
-    !nomorPelanggan ||
-    !namaPelanggan ||
+    !idPelanggan ||
+    !nama ||
     !golongan ||
-    !bulan ||
     pemakaianKwh === undefined ||
     pemakaianKwh === null ||
     pemakaianKwh === '' ||
     totalTagihan === undefined ||
     totalTagihan === null ||
-    totalTagihan === '' ||
-    !status
+    totalTagihan === ''
   ) {
     return res.status(400).json({
       status: 'error',
@@ -207,13 +185,11 @@ app.put('/electricity-bills/:id', (req, res) => {
 
   const dataDiperbarui = {
     id,
-    nomorPelanggan: String(nomorPelanggan),
-    namaPelanggan: String(namaPelanggan),
+    idPelanggan: String(idPelanggan),
+    nama: String(nama),
     golongan: String(golongan),
-    bulan: String(bulan),
     pemakaianKwh: Number(pemakaianKwh),
-    totalTagihan: Number(totalTagihan),
-    status: String(status)
+    totalTagihan: Number(totalTagihan)
   };
 
   electricityBills[index] = dataDiperbarui;
