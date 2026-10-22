@@ -14,6 +14,14 @@ const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Middleware logger untuk mencatat setiap request yang masuk
+function logger(req, res, next) {
+  const waktu = new Date().toISOString();
+  console.log(`[${waktu}] ${req.method} ${req.url}`);
+  next();
+}
+app.use(logger);
+
 // Middleware agar req.body (JSON) dapat dibaca
 app.use(express.json());
 
@@ -21,31 +29,43 @@ app.use(express.json());
 let electricityBills = [
   {
     id: 1,
-    idPelanggan: '171234567890',
+    nomorPelanggan: '512019827364',
+    idPelanggan: '512019827364',
+    namaPelanggan: 'Yudi Pratama',
     nama: 'Yudi Pratama',
-    golongan: 'R1',
+    golongan: 'R1-900VA',
+    bulan: 'Januari 2025',
     pemakaianKwh: 210,
-    totalTagihan: 303000
+    totalTagihan: 303000,
+    status: 'Lunas'
   },
   {
     id: 2,
-    idPelanggan: '171234567891',
+    nomorPelanggan: '512028374651',
+    idPelanggan: '512028374651',
+    namaPelanggan: 'Andi Setiawan',
     nama: 'Andi Setiawan',
-    golongan: 'R2',
+    golongan: 'R1-1300VA',
+    bulan: 'Januari 2025',
     pemakaianKwh: 150,
-    totalTagihan: 210000
+    totalTagihan: 216600,
+    status: 'Belum Lunas'
   },
   {
     id: 3,
-    idPelanggan: '171234567892',
+    nomorPelanggan: '512037465819',
+    idPelanggan: '512037465819',
+    namaPelanggan: 'Budi Santoso',
     nama: 'Budi Santoso',
-    golongan: 'R1',
+    golongan: 'R1-900VA',
+    bulan: 'Januari 2025',
     pemakaianKwh: 300,
-    totalTagihan: 450000
+    totalTagihan: 450000,
+    status: 'Lunas'
   }
 ];
 
-let nextId = 5; // penghitung id untuk data baru
+let nextId = 4; // penghitung id untuk data baru
 
 // GET / -> memastikan server berjalan dan menampilkan info API
 app.get('/', (req, res) => {
@@ -91,23 +111,21 @@ app.get('/electricity-bills/:id', (req, res) => {
   res.json(data);
 });
 
-// POST /electricity-bills -> tambah data baru
-// Body: { nomorPelanggan, namaPelanggan, golongan, bulan, pemakaianKwh, totalTagihan, status }
+// POST /electricity-bills -> tambah data baru via Postman
+// Body mendukung: nomorPelanggan (atau idPelanggan), namaPelanggan (atau nama), golongan, bulan, pemakaianKwh, totalTagihan, status
 app.post('/electricity-bills', (req, res) => {
-  const {
-    nomorPelanggan,
-    namaPelanggan,
-    golongan,
-    bulan,
-    pemakaianKwh,
-    totalTagihan,
-    status
-  } = req.body;
+  const nomorPelanggan = req.body.nomorPelanggan || req.body.idPelanggan;
+  const namaPelanggan = req.body.namaPelanggan || req.body.nama;
+  const golongan = req.body.golongan;
+  const bulan = req.body.bulan || 'Februari 2025';
+  const pemakaianKwh = req.body.pemakaianKwh;
+  const totalTagihan = req.body.totalTagihan;
+  const status = req.body.status || 'Belum Lunas';
 
   // Validasi seluruh field wajib topik
   if (
-    !idPelanggan ||
-    !nama ||
+    !nomorPelanggan ||
+    !namaPelanggan ||
     !golongan ||
     pemakaianKwh === undefined ||
     pemakaianKwh === null ||
@@ -118,18 +136,22 @@ app.post('/electricity-bills', (req, res) => {
   ) {
     return res.status(400).json({
       status: 'error',
-      message: 'Semua field wajib diisi: idPelanggan, nama, golongan, pemakaianKwh, totalTagihan',
+      message: 'Semua field wajib diisi: nomorPelanggan/idPelanggan, namaPelanggan/nama, golongan, pemakaianKwh, totalTagihan',
       data: null
     });
   }
 
   const baru = {
     id: nextId++,
-    idPelanggan: String(idPelanggan),
-    nama: String(nama),
+    nomorPelanggan: String(nomorPelanggan),
+    idPelanggan: String(nomorPelanggan),
+    namaPelanggan: String(namaPelanggan),
+    nama: String(namaPelanggan),
     golongan: String(golongan),
+    bulan: String(bulan),
     pemakaianKwh: Number(pemakaianKwh),
-    totalTagihan: Number(totalTagihan)
+    totalTagihan: Number(totalTagihan),
+    status: String(status)
   };
 
   electricityBills.push(baru);
@@ -142,7 +164,6 @@ app.post('/electricity-bills', (req, res) => {
 });
 
 // PUT /electricity-bills/:id -> ubah seluruh data (penggantian penuh)
-// Body: { nomorPelanggan, namaPelanggan, golongan, bulan, pemakaianKwh, totalTagihan, status }
 app.put('/electricity-bills/:id', (req, res) => {
   const id = parseInt(req.params.id);
   const index = electricityBills.findIndex((b) => b.id === id);
@@ -155,19 +176,17 @@ app.put('/electricity-bills/:id', (req, res) => {
     });
   }
 
-  const {
-    nomorPelanggan,
-    namaPelanggan,
-    golongan,
-    bulan,
-    pemakaianKwh,
-    totalTagihan,
-    status
-  } = req.body;
+  const nomorPelanggan = req.body.nomorPelanggan || req.body.idPelanggan;
+  const namaPelanggan = req.body.namaPelanggan || req.body.nama;
+  const golongan = req.body.golongan;
+  const bulan = req.body.bulan || electricityBills[index].bulan || 'Januari 2025';
+  const pemakaianKwh = req.body.pemakaianKwh;
+  const totalTagihan = req.body.totalTagihan;
+  const status = req.body.status || electricityBills[index].status || 'Belum Lunas';
 
   if (
-    !idPelanggan ||
-    !nama ||
+    !nomorPelanggan ||
+    !namaPelanggan ||
     !golongan ||
     pemakaianKwh === undefined ||
     pemakaianKwh === null ||
@@ -185,11 +204,15 @@ app.put('/electricity-bills/:id', (req, res) => {
 
   const dataDiperbarui = {
     id,
-    idPelanggan: String(idPelanggan),
-    nama: String(nama),
+    nomorPelanggan: String(nomorPelanggan),
+    idPelanggan: String(nomorPelanggan),
+    namaPelanggan: String(namaPelanggan),
+    nama: String(namaPelanggan),
     golongan: String(golongan),
+    bulan: String(bulan),
     pemakaianKwh: Number(pemakaianKwh),
-    totalTagihan: Number(totalTagihan)
+    totalTagihan: Number(totalTagihan),
+    status: String(status)
   };
 
   electricityBills[index] = dataDiperbarui;
@@ -214,12 +237,12 @@ app.delete('/electricity-bills/:id', (req, res) => {
     });
   }
 
-  electricityBills.splice(index, 1);
+  const deleted = electricityBills.splice(index, 1);
 
   res.json({
     status: 'success',
     message: `Data tagihan listrik dengan id ${id} berhasil dihapus`,
-    data: null
+    data: deleted[0]
   });
 });
 
@@ -233,7 +256,6 @@ app.use((req, res) => {
 });
 
 // Jalankan server hanya saat diuji secara lokal
-// module.exports = app digunakan oleh Vercel untuk serverless function
 if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
     console.log(`Server berjalan di http://localhost:${PORT}`);

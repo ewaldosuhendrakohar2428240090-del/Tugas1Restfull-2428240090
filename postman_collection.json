@@ -1,215 +1,499 @@
 {
   "info": {
     "_postman_id": "c1f7b029-9e5c-4c4f-a728-electricitybills",
-    "name": "Tugas 1 - Utilitas Tagihan Listrik API (2428240090)",
-    "description": "Koleksi Postman untuk pengujian RESTful API Utilitas Tagihan Listrik (/electricity-bills) - Tugas 1 PAW2 SI5B oleh Ewaldo Suhendra Kohar (2428240090).",
+    "name": "Tugas 2 - Utilitas Tagihan Listrik API Automation",
+    "description": "Koleksi Postman untuk pengujian otomatis (Automated Testing) RESTful API Utilitas Tagihan Listrik (/electricity-bills) oleh Ewaldo Suhendra Kohar (2428240090).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
-  "variable": [
-    {
-      "key": "baseUrl",
-      "value": "http://localhost:3000",
-      "type": "string"
-    }
-  ],
   "item": [
     {
-      "name": "0. Info API (GET /)",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/",
-          "host": ["{{baseUrl}}"],
-          "path": [""]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "1. Ambil Semua Data (GET /electricity-bills)",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/electricity-bills",
-          "host": ["{{baseUrl}}"],
-          "path": ["electricity-bills"]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "2. Filter Golongan (GET /electricity-bills?golongan=R1-900VA)",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/electricity-bills?golongan=R1-900VA",
-          "host": ["{{baseUrl}}"],
-          "path": ["electricity-bills"],
-          "query": [
+      "name": "01. CRUD (Skenario Sukses)",
+      "item": [
+        {
+          "name": "1. GET Info API (GET /)",
+          "event": [
             {
-              "key": "golongan",
-              "value": "R1-900VA"
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code adalah 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response memiliki informasi status success dan topik tagihan listrik\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"success\");",
+                  "    pm.expect(jsonData.topik).to.eql(\"Utilitas Tagihan Listrik\");",
+                  "    pm.expect(jsonData.nim).to.eql(\"2428240090\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
             }
-          ]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "3. Ambil Satu Data Sukses (GET /electricity-bills/1)",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/electricity-bills/1",
-          "host": ["{{baseUrl}}"],
-          "path": ["electricity-bills", "1"]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "4. Ambil Satu Data Gagal 404 (GET /electricity-bills/99)",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/electricity-bills/99",
-          "host": ["{{baseUrl}}"],
-          "path": ["electricity-bills", "99"]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "5. Tambah Data Sukses 201 (POST /electricity-bills)",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"nomorPelanggan\": \"512033445566\",\n  \"namaPelanggan\": \"Fajar Pratama\",\n  \"golongan\": \"R1-900VA\",\n  \"bulan\": \"Februari 2025\",\n  \"pemakaianKwh\": 135,\n  \"totalTagihan\": 182250,\n  \"status\": \"Belum Lunas\"\n}"
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": ["{{baseUrl}}"],
+              "path": [""]
+            },
+            "description": "Memastikan server menyala dan info API tampil."
+          },
+          "response": []
         },
-        "url": {
-          "raw": "{{baseUrl}}/electricity-bills",
-          "host": ["{{baseUrl}}"],
-          "path": ["electricity-bills"]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "6. Tambah Data Gagal 400 - Field Kosong (POST /electricity-bills)",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"namaPelanggan\": \"Data Tanpa Field Lengkap\"\n}"
+        {
+          "name": "2. GET Semua Tagihan Listrik",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code adalah 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response berbentuk array dan data tidak kosong\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an(\"array\");",
+                  "    pm.expect(jsonData.length).to.be.above(0);",
+                  "});",
+                  "",
+                  "pm.test(\"Objek data tagihan memiliki field id, nomorPelanggan, dan totalTagihan\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData[0]).to.have.property(\"id\");",
+                  "    pm.expect(jsonData[0]).to.have.property(\"golongan\");",
+                  "    pm.expect(jsonData[0]).to.have.property(\"totalTagihan\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/electricity-bills",
+              "host": ["{{baseUrl}}"],
+              "path": ["electricity-bills"]
+            },
+            "description": "Mengambil seluruh daftar tagihan listrik."
+          },
+          "response": []
         },
-        "url": {
-          "raw": "{{baseUrl}}/electricity-bills",
-          "host": ["{{baseUrl}}"],
-          "path": ["electricity-bills"]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "7. Ubah Data Penuh Sukses 200 (PUT /electricity-bills/1)",
-      "request": {
-        "method": "PUT",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"nomorPelanggan\": \"512019827364\",\n  \"namaPelanggan\": \"Budi Santoso (Updated)\",\n  \"golongan\": \"R1-1300VA\",\n  \"bulan\": \"Januari 2025\",\n  \"pemakaianKwh\": 150,\n  \"totalTagihan\": 216600,\n  \"status\": \"Lunas\"\n}"
+        {
+          "name": "3. POST Tambah Tagihan Listrik Baru",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code adalah 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response memiliki status success dan data tersimpan dengan id baru\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"success\");",
+                  "    pm.expect(jsonData.data).to.have.property(\"id\");",
+                  "    pm.expect(jsonData.data.namaPelanggan).to.eql(\"Fajar Pratama\");",
+                  "    pm.expect(jsonData.data.golongan).to.eql(\"R1-900VA\");",
+                  "});",
+                  "",
+                  "pm.test(\"Simpan ID tagihan listrik baru ke environment variable billId\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.id).to.be.a(\"number\");",
+                  "    pm.environment.set(\"billId\", jsonData.data.id);",
+                  "    console.log(\"billId disimpan ke environment:\", jsonData.data.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nomorPelanggan\": \"512033445566\",\n  \"namaPelanggan\": \"Fajar Pratama\",\n  \"golongan\": \"R1-900VA\",\n  \"bulan\": \"Februari 2025\",\n  \"pemakaianKwh\": 135,\n  \"totalTagihan\": 182250,\n  \"status\": \"Belum Lunas\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/electricity-bills",
+              "host": ["{{baseUrl}}"],
+              "path": ["electricity-bills"]
+            },
+            "description": "Menambahkan data tagihan listrik baru dan menyimpan ID yang dihasilkan ke environment variable billId."
+          },
+          "response": []
         },
-        "url": {
-          "raw": "{{baseUrl}}/electricity-bills/1",
-          "host": ["{{baseUrl}}"],
-          "path": ["electricity-bills", "1"]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "8. Ubah Data Gagal 404 (PUT /electricity-bills/99)",
-      "request": {
-        "method": "PUT",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"nomorPelanggan\": \"512019827364\",\n  \"namaPelanggan\": \"Tidak Ada\",\n  \"golongan\": \"R1-900VA\",\n  \"bulan\": \"Januari 2025\",\n  \"pemakaianKwh\": 100,\n  \"totalTagihan\": 135000,\n  \"status\": \"Lunas\"\n}"
+        {
+          "name": "4. GET Tagihan Listrik by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code adalah 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"ID data tagihan listrik sesuai dengan variabel billId\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    const expectedId = parseInt(pm.environment.get(\"billId\"));",
+                  "    pm.expect(jsonData.id).to.eql(expectedId);",
+                  "    pm.expect(jsonData.namaPelanggan).to.eql(\"Fajar Pratama\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/electricity-bills/{{billId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["electricity-bills", "{{billId}}"]
+            },
+            "description": "Mengambil satu data spesifik menggunakan ID dari environment variable."
+          },
+          "response": []
         },
-        "url": {
-          "raw": "{{baseUrl}}/electricity-bills/99",
-          "host": ["{{baseUrl}}"],
-          "path": ["electricity-bills", "99"]
+        {
+          "name": "5. PUT Update Tagihan Listrik",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code adalah 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Data tagihan listrik berhasil diperbarui sesuai perubahan\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"success\");",
+                  "    pm.expect(jsonData.data.namaPelanggan).to.eql(\"Fajar Pratama Updated\");",
+                  "    pm.expect(jsonData.data.status).to.eql(\"Lunas\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nomorPelanggan\": \"512033445566\",\n  \"namaPelanggan\": \"Fajar Pratama Updated\",\n  \"golongan\": \"R1-900VA\",\n  \"bulan\": \"Februari 2025\",\n  \"pemakaianKwh\": 135,\n  \"totalTagihan\": 182250,\n  \"status\": \"Lunas\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/electricity-bills/{{billId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["electricity-bills", "{{billId}}"]
+            },
+            "description": "Memperbarui data tagihan listrik menggunakan ID yang aktif di environment."
+          },
+          "response": []
+        },
+        {
+          "name": "6. GET Filter Tagihan by Golongan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code adalah 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Semua data yang dikembalikan memiliki golongan R1-900VA\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an(\"array\");",
+                  "    jsonData.forEach(function(item) {",
+                  "        pm.expect(item.golongan.toLowerCase()).to.eql(\"r1-900va\");",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/electricity-bills?golongan=R1-900VA",
+              "host": ["{{baseUrl}}"],
+              "path": ["electricity-bills"],
+              "query": [
+                {
+                  "key": "golongan",
+                  "value": "R1-900VA"
+                }
+              ]
+            },
+            "description": "Menguji filtering query parameter golongan."
+          },
+          "response": []
+        },
+        {
+          "name": "7. DELETE Tagihan Listrik by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code adalah 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Pesan konfirmasi data berhasil dihapus\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"success\");",
+                  "    pm.expect(jsonData.message).to.include(\"berhasil dihapus\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/electricity-bills/{{billId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["electricity-bills", "{{billId}}"]
+            },
+            "description": "Menghapus data yang baru saja dibuat dan diubah menggunakan billId."
+          },
+          "response": []
         }
-      },
-      "response": []
+      ]
     },
     {
-      "name": "9. Hapus Data Sukses 200 (DELETE /electricity-bills/2)",
-      "request": {
-        "method": "DELETE",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/electricity-bills/2",
-          "host": ["{{baseUrl}}"],
-          "path": ["electricity-bills", "2"]
+      "name": "02. Skenario Gagal & Validasi",
+      "item": [
+        {
+          "name": "8. POST Validasi Gagal (Field Kosong)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code adalah 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Response menampilkan status error dan pesan validasi wajib\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"error\");",
+                  "    pm.expect(jsonData.message).to.include(\"wajib diisi\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"namaPelanggan\": \"Data Tanpa Field Lengkap\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/electricity-bills",
+              "host": ["{{baseUrl}}"],
+              "path": ["electricity-bills"]
+            },
+            "description": "Menguji penolakan ketika body request tidak memiliki field lengkap."
+          },
+          "response": []
+        },
+        {
+          "name": "9. GET Tagihan ID Tidak Ditemukan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code adalah 404 Not Found\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"Response memuat status error data tidak ditemukan\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"error\");",
+                  "    pm.expect(jsonData.message).to.include(\"tidak ditemukan\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/electricity-bills/9999",
+              "host": ["{{baseUrl}}"],
+              "path": ["electricity-bills", "9999"]
+            },
+            "description": "Menguji respons ketika ID tidak ada."
+          },
+          "response": []
+        },
+        {
+          "name": "10. PUT Tagihan ID Tidak Ditemukan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code adalah 404 Not Found\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"Response memuat status error data tidak ditemukan\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"error\");",
+                  "    pm.expect(jsonData.message).to.include(\"tidak ditemukan\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nomorPelanggan\": \"512019827364\",\n  \"namaPelanggan\": \"Tidak Ada\",\n  \"golongan\": \"R1-900VA\",\n  \"bulan\": \"Januari 2025\",\n  \"pemakaianKwh\": 100,\n  \"totalTagihan\": 135000,\n  \"status\": \"Lunas\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/electricity-bills/9999",
+              "host": ["{{baseUrl}}"],
+              "path": ["electricity-bills", "9999"]
+            },
+            "description": "Menguji pembaruan untuk data yang tidak ada."
+          },
+          "response": []
+        },
+        {
+          "name": "11. DELETE Tagihan ID Tidak Ditemukan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code adalah 404 Not Found\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"Response memuat status error data tidak ditemukan\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"error\");",
+                  "    pm.expect(jsonData.message).to.include(\"tidak ditemukan\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/electricity-bills/9999",
+              "host": ["{{baseUrl}}"],
+              "path": ["electricity-bills", "9999"]
+            },
+            "description": "Menguji penghapusan untuk data yang tidak ada."
+          },
+          "response": []
+        },
+        {
+          "name": "12. Route Tidak Dikenal (GET /rute-ngawur)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code adalah 404 Not Found\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"Response memuat pesan Endpoint tidak ditemukan\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"error\");",
+                  "    pm.expect(jsonData.message).to.eql(\"Endpoint tidak ditemukan\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/rute-ngawur",
+              "host": ["{{baseUrl}}"],
+              "path": ["rute-ngawur"]
+            },
+            "description": "Menguji penanganan route catch-all 404."
+          },
+          "response": []
         }
-      },
-      "response": []
-    },
-    {
-      "name": "10. Hapus Data Gagal 404 (DELETE /electricity-bills/99)",
-      "request": {
-        "method": "DELETE",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/electricity-bills/99",
-          "host": ["{{baseUrl}}"],
-          "path": ["electricity-bills", "99"]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "11. Route Tidak Dikenal 404 (GET /rute-ngawur)",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/rute-ngawur",
-          "host": ["{{baseUrl}}"],
-          "path": ["rute-ngawur"]
-        }
-      },
-      "response": []
+      ]
     }
   ]
 }
