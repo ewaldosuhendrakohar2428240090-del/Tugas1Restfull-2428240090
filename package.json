@@ -16,7 +16,9 @@
   "author": "Ewaldo Suhendra Kohar",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.21.2"
+    "dotenv": "^18.0.9",
+    "express": "^4.21.2",
+    "mongoose": "^9.11.4"
   },
   "devDependencies": {
     "nodemon": "^3.1.9"

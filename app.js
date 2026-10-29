@@ -1,18 +1,42 @@
-/**
- * Tugas 1: RESTful API Murni dengan Express.js
- * Sesuai panduan: https://rachmat-nur.gitbook.io/express
- * 
- * Nama    : Ewaldo Suhendra Kohar
- * NIM     : 2428240090
- * Kelas   : SI5B
- * Topik   : Utilitas Tagihan Listrik
- * Resource: /electricity-bills
- * Filter  : golongan
- */
-
+require('dotenv').config();
 const express = require('express');
+const mongoose = require('mongoose');
+const ElectricityBill = require('./models/ElectricityBill');
+const TarifListrik = require('./models/TarifListrik');
+const cekApiKey = require('./middlewares/cekApiKey');
+
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 4000;
+const DB_URI = process.env.DB_URI || 'mongodb://localhost:27017/utilitas_listrik';
+
+// Batasan bawaan pagination & query
+const LIMIT_DEFAULT = 10;
+const LIMIT_MAKS = 50;
+const FIELD_SORT = ['namaPelanggan', 'pemakaianKwh', 'totalTagihan', 'createdAt', 'golongan', 'status'];
+const FIELD_BOLEH_DIPILIH = [
+  'nomorPelanggan',
+  'namaPelanggan',
+  'golongan',
+  'bulan',
+  'pemakaianKwh',
+  'totalTagihan',
+  'status',
+  'alamat',
+  'tarifId',
+  'createdAt'
+];
+
+// Helper angka aman untuk query pagination
+function angkaAman(nilai, bawaan, min, maks) {
+  const n = parseInt(nilai, 10);
+  if (Number.isNaN(n)) return bawaan;
+  return Math.min(Math.max(n, min), maks);
+}
+
+// Helper untuk mengecek apakah format ID valid sebagai MongoDB ObjectId
+function isValidObjectId(id) {
+  return mongoose.Types.ObjectId.isValid(id);
+}
 
 // Middleware logger untuk mencatat setiap request yang masuk
 function logger(req, res, next) {
@@ -25,48 +49,6 @@ app.use(logger);
 // Middleware agar req.body (JSON) dapat dibaca
 app.use(express.json());
 
-// Data sementara (disimpan di memori, hilang saat server restart)
-let electricityBills = [
-  {
-    id: 1,
-    nomorPelanggan: '512019827364',
-    idPelanggan: '512019827364',
-    namaPelanggan: 'Yudi Pratama',
-    nama: 'Yudi Pratama',
-    golongan: 'R1-900VA',
-    bulan: 'Januari 2025',
-    pemakaianKwh: 210,
-    totalTagihan: 303000,
-    status: 'Lunas'
-  },
-  {
-    id: 2,
-    nomorPelanggan: '512028374651',
-    idPelanggan: '512028374651',
-    namaPelanggan: 'Andi Setiawan',
-    nama: 'Andi Setiawan',
-    golongan: 'R1-1300VA',
-    bulan: 'Januari 2025',
-    pemakaianKwh: 150,
-    totalTagihan: 216600,
-    status: 'Belum Lunas'
-  },
-  {
-    id: 3,
-    nomorPelanggan: '512037465819',
-    idPelanggan: '512037465819',
-    namaPelanggan: 'Budi Santoso',
-    nama: 'Budi Santoso',
-    golongan: 'R1-900VA',
-    bulan: 'Januari 2025',
-    pemakaianKwh: 300,
-    totalTagihan: 450000,
-    status: 'Lunas'
-  }
-];
-
-let nextId = 4; // penghitung id untuk data baru
-
 // GET / -> memastikan server berjalan dan menampilkan info API
 app.get('/', (req, res) => {
   res.json({
@@ -77,173 +59,345 @@ app.get('/', (req, res) => {
     kelas: 'SI5B',
     topik: 'Utilitas Tagihan Listrik',
     resource: '/electricity-bills',
-    filter: 'golongan'
+    fitur: ['Embedding Schema', 'Referencing Schema', 'Filtering', 'Pagination', 'Sorting', 'Projection']
   });
 });
 
-// GET /electricity-bills -> seluruh data, bisa difilter: /electricity-bills?golongan=R1-900VA
-app.get('/electricity-bills', (req, res) => {
-  const { golongan } = req.query;
-
-  if (golongan) {
-    const hasil = electricityBills.filter(
-      (b) => b.golongan.toLowerCase() === golongan.toLowerCase()
-    );
-    return res.json(hasil);
+// GET /tariffs -> endpoint pendukung untuk melihat data master tarif listrik (Referencing)
+app.get('/tariffs', async (req, res) => {
+  try {
+    const data = await TarifListrik.find();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
   }
-
-  res.json(electricityBills);
 });
 
-// GET /electricity-bills/:id -> satu data berdasarkan id
-app.get('/electricity-bills/:id', (req, res) => {
-  const id = parseInt(req.params.id);
-  const data = electricityBills.find((b) => b.id === id);
+/**
+ * GET /electricity-bills -> Endpoint Utama
+ * Mendukung:
+ * 1. Filtering:
+ *    - ?golongan=R1-900VA
+ *    - ?status=Lunas
+ *    - ?kota=Palembang (filter pada Embedded Schema alamat.kota)
+ * 2. Pagination:
+ *    - ?page=1&limit=5
+ * 3. Sorting:
+ *    - ?sort=totalTagihan (naik) atau ?sort=-totalTagihan (turun)
+ * 4. Projection:
+ *    - ?fields=namaPelanggan,totalTagihan,status
+ * 5. Referencing:
+ *    - populate('tarifId') secara otomatis
+ */
+app.get('/electricity-bills', async (req, res) => {
+  try {
+    const filter = {};
 
-  if (!data) {
-    return res.status(404).json({
+    // 1. FILTERING
+    if (req.query.golongan) {
+      filter.golongan = { $regex: new RegExp(`^${req.query.golongan}$`, 'i') };
+    }
+    if (req.query.status) {
+      filter.status = { $regex: new RegExp(`^${req.query.status}$`, 'i') };
+    }
+    if (req.query.kota) {
+      filter['alamat.kota'] = { $regex: new RegExp(`^${req.query.kota}$`, 'i') };
+    }
+
+    // 2. PAGINATION
+    const isPaginated = req.query.page !== undefined || req.query.limit !== undefined;
+    const page = angkaAman(req.query.page, 1, 1, Number.MAX_SAFE_INTEGER);
+    const limit = angkaAman(req.query.limit, LIMIT_DEFAULT, 1, LIMIT_MAKS);
+
+    // 3. SORTING: ?sort=totalTagihan atau ?sort=-totalTagihan
+    const sortParam = String(req.query.sort || '-createdAt');
+    const arah = sortParam.startsWith('-') ? -1 : 1;
+    const sortField = sortParam.replace(/^-/, '');
+
+    if (req.query.sort && !FIELD_SORT.includes(sortField)) {
+      return res.status(400).json({
+        status: 'error',
+        message: `sort hanya boleh salah satu dari: ${FIELD_SORT.join(', ')}`
+      });
+    }
+
+    // 4. PROJECTION: ?fields=namaPelanggan,totalTagihan
+    let select = '';
+    if (req.query.fields) {
+      const fields = String(req.query.fields).split(',').map((f) => f.trim());
+      const isValid = fields.every((f) => FIELD_BOLEH_DIPILIH.includes(f));
+      if (!isValid) {
+        return res.status(400).json({
+          status: 'error',
+          message: `fields hanya boleh dari: ${FIELD_BOLEH_DIPILIH.join(', ')}`
+        });
+      }
+      select = fields.join(' ');
+    }
+
+    // Bangun Query Mongoose
+    let query = ElectricityBill.find(filter).select(select);
+
+    if (req.query.sort) {
+      query = query.sort({ [sortField]: arah, _id: 1 });
+    }
+
+    // REFERENCING: populate tarifId
+    if (!select || select.split(' ').includes('tarifId')) {
+      query = query.populate('tarifId', 'golongan daya tarifPerKwh deskripsi');
+    }
+
+    if (isPaginated) {
+      query = query.skip((page - 1) * limit).limit(limit);
+      const [data, total] = await Promise.all([query, ElectricityBill.countDocuments(filter)]);
+      return res.json({
+        status: 'success',
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        data
+      });
+    }
+
+    // Jika tanpa parameter page/limit, kembalikan array langsung untuk kompatibilitas tugas sebelumnya
+    const data = await query;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({
       status: 'error',
-      message: `Data dengan id ${id} tidak ditemukan`,
-      data: null
+      message: 'Gagal mengambil data tagihan listrik',
+      error: err.message
     });
   }
-
-  res.json(data);
 });
 
-// POST /electricity-bills -> tambah data baru via Postman
-// Body mendukung: nomorPelanggan (atau idPelanggan), namaPelanggan (atau nama), golongan, bulan, pemakaianKwh, totalTagihan, status
-app.post('/electricity-bills', (req, res) => {
-  const nomorPelanggan = req.body.nomorPelanggan || req.body.idPelanggan;
-  const namaPelanggan = req.body.namaPelanggan || req.body.nama;
-  const golongan = req.body.golongan;
-  const bulan = req.body.bulan || 'Februari 2025';
-  const pemakaianKwh = req.body.pemakaianKwh;
-  const totalTagihan = req.body.totalTagihan;
-  const status = req.body.status || 'Belum Lunas';
+// GET /electricity-bills/:id -> satu data berdasarkan id (lengkap dengan populate tarifId)
+app.get('/electricity-bills/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
 
-  // Validasi seluruh field wajib topik
-  if (
-    !nomorPelanggan ||
-    !namaPelanggan ||
-    !golongan ||
-    pemakaianKwh === undefined ||
-    pemakaianKwh === null ||
-    pemakaianKwh === '' ||
-    totalTagihan === undefined ||
-    totalTagihan === null ||
-    totalTagihan === ''
-  ) {
-    return res.status(400).json({
+    if (!isValidObjectId(id)) {
+      return res.status(404).json({
+        status: 'error',
+        message: `Data dengan id ${id} tidak ditemukan`,
+        data: null
+      });
+    }
+
+    const data = await ElectricityBill.findById(id).populate('tarifId');
+
+    if (!data) {
+      return res.status(404).json({
+        status: 'error',
+        message: `Data dengan id ${id} tidak ditemukan`,
+        data: null
+      });
+    }
+
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({
       status: 'error',
-      message: 'Semua field wajib diisi: nomorPelanggan/idPelanggan, namaPelanggan/nama, golongan, pemakaianKwh, totalTagihan',
-      data: null
+      message: 'Gagal mengambil data tagihan listrik',
+      error: err.message
     });
   }
-
-  const baru = {
-    id: nextId++,
-    nomorPelanggan: String(nomorPelanggan),
-    idPelanggan: String(nomorPelanggan),
-    namaPelanggan: String(namaPelanggan),
-    nama: String(namaPelanggan),
-    golongan: String(golongan),
-    bulan: String(bulan),
-    pemakaianKwh: Number(pemakaianKwh),
-    totalTagihan: Number(totalTagihan),
-    status: String(status)
-  };
-
-  electricityBills.push(baru);
-
-  res.status(201).json({
-    status: 'success',
-    message: 'Data berhasil ditambahkan',
-    data: baru
-  });
 });
 
-// PUT /electricity-bills/:id -> ubah seluruh data (penggantian penuh)
-app.put('/electricity-bills/:id', (req, res) => {
-  const id = parseInt(req.params.id);
-  const index = electricityBills.findIndex((b) => b.id === id);
+// POST /electricity-bills -> tambah data baru (dilindungi dengan cekApiKey)
+app.post('/electricity-bills', cekApiKey, async (req, res) => {
+  try {
+    const nomorPelanggan = req.body.nomorPelanggan || req.body.idPelanggan;
+    const namaPelanggan = req.body.namaPelanggan || req.body.nama;
+    const golongan = req.body.golongan;
+    const bulan = req.body.bulan || 'Februari 2025';
+    const pemakaianKwh = req.body.pemakaianKwh;
+    const totalTagihan = req.body.totalTagihan;
+    const status = req.body.status || 'Belum Lunas';
+    const alamat = req.body.alamat || {};
+    let tarifId = req.body.tarifId;
 
-  if (index === -1) {
-    return res.status(404).json({
+    // Validasi field wajib
+    if (
+      !nomorPelanggan ||
+      !namaPelanggan ||
+      !golongan ||
+      pemakaianKwh === undefined ||
+      pemakaianKwh === null ||
+      pemakaianKwh === '' ||
+      totalTagihan === undefined ||
+      totalTagihan === null ||
+      totalTagihan === ''
+    ) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Semua field wajib diisi: nomorPelanggan/idPelanggan, namaPelanggan/nama, golongan, pemakaianKwh, totalTagihan',
+        data: null
+      });
+    }
+
+    // Auto-resolve tarifId jika user tidak mengirimkan ObjectId tarifId secara manual
+    if (!tarifId) {
+      const tarifMatch = await TarifListrik.findOne({ golongan: String(golongan).trim() });
+      if (tarifMatch) {
+        tarifId = tarifMatch._id;
+      }
+    }
+
+    const baru = await ElectricityBill.create({
+      nomorPelanggan: String(nomorPelanggan),
+      namaPelanggan: String(namaPelanggan),
+      golongan: String(golongan),
+      bulan: String(bulan),
+      pemakaianKwh: Number(pemakaianKwh),
+      totalTagihan: Number(totalTagihan),
+      status: String(status),
+      alamat,
+      tarifId
+    });
+
+    const populatedBaru = await ElectricityBill.findById(baru._id).populate('tarifId');
+
+    res.status(201).json({
+      status: 'success',
+      message: 'Data berhasil ditambahkan',
+      data: populatedBaru || baru
+    });
+  } catch (err) {
+    res.status(400).json({
       status: 'error',
-      message: `Data dengan id ${id} tidak ditemukan`,
+      message: err.message,
       data: null
     });
   }
-
-  const nomorPelanggan = req.body.nomorPelanggan || req.body.idPelanggan;
-  const namaPelanggan = req.body.namaPelanggan || req.body.nama;
-  const golongan = req.body.golongan;
-  const bulan = req.body.bulan || electricityBills[index].bulan || 'Januari 2025';
-  const pemakaianKwh = req.body.pemakaianKwh;
-  const totalTagihan = req.body.totalTagihan;
-  const status = req.body.status || electricityBills[index].status || 'Belum Lunas';
-
-  if (
-    !nomorPelanggan ||
-    !namaPelanggan ||
-    !golongan ||
-    pemakaianKwh === undefined ||
-    pemakaianKwh === null ||
-    pemakaianKwh === '' ||
-    totalTagihan === undefined ||
-    totalTagihan === null ||
-    totalTagihan === ''
-  ) {
-    return res.status(400).json({
-      status: 'error',
-      message: 'Semua field wajib diisi untuk penggantian penuh',
-      data: null
-    });
-  }
-
-  const dataDiperbarui = {
-    id,
-    nomorPelanggan: String(nomorPelanggan),
-    idPelanggan: String(nomorPelanggan),
-    namaPelanggan: String(namaPelanggan),
-    nama: String(namaPelanggan),
-    golongan: String(golongan),
-    bulan: String(bulan),
-    pemakaianKwh: Number(pemakaianKwh),
-    totalTagihan: Number(totalTagihan),
-    status: String(status)
-  };
-
-  electricityBills[index] = dataDiperbarui;
-
-  res.json({
-    status: 'success',
-    message: 'Data berhasil diperbarui',
-    data: dataDiperbarui
-  });
 });
 
-// DELETE /electricity-bills/:id -> hapus data
-app.delete('/electricity-bills/:id', (req, res) => {
-  const id = parseInt(req.params.id);
-  const index = electricityBills.findIndex((b) => b.id === id);
+// PUT /electricity-bills/:id -> ubah data (dilindungi dengan cekApiKey)
+app.put('/electricity-bills/:id', cekApiKey, async (req, res) => {
+  try {
+    const { id } = req.params;
 
-  if (index === -1) {
-    return res.status(404).json({
+    if (!isValidObjectId(id)) {
+      return res.status(404).json({
+        status: 'error',
+        message: `Data dengan id ${id} tidak ditemukan`,
+        data: null
+      });
+    }
+
+    const nomorPelanggan = req.body.nomorPelanggan || req.body.idPelanggan;
+    const namaPelanggan = req.body.namaPelanggan || req.body.nama;
+    const golongan = req.body.golongan;
+    const bulan = req.body.bulan || 'Januari 2025';
+    const pemakaianKwh = req.body.pemakaianKwh;
+    const totalTagihan = req.body.totalTagihan;
+    const status = req.body.status || 'Belum Lunas';
+    const alamat = req.body.alamat;
+    let tarifId = req.body.tarifId;
+
+    if (
+      !nomorPelanggan ||
+      !namaPelanggan ||
+      !golongan ||
+      pemakaianKwh === undefined ||
+      pemakaianKwh === null ||
+      pemakaianKwh === '' ||
+      totalTagihan === undefined ||
+      totalTagihan === null ||
+      totalTagihan === ''
+    ) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Semua field wajib diisi untuk penggantian penuh',
+        data: null
+      });
+    }
+
+    // Auto-resolve tarifId jika golongan diubah
+    if (!tarifId && golongan) {
+      const tarifMatch = await TarifListrik.findOne({ golongan: String(golongan).trim() });
+      if (tarifMatch) {
+        tarifId = tarifMatch._id;
+      }
+    }
+
+    const updatePayload = {
+      nomorPelanggan: String(nomorPelanggan),
+      namaPelanggan: String(namaPelanggan),
+      golongan: String(golongan),
+      bulan: String(bulan),
+      pemakaianKwh: Number(pemakaianKwh),
+      totalTagihan: Number(totalTagihan),
+      status: String(status)
+    };
+
+    if (alamat) updatePayload.alamat = alamat;
+    if (tarifId) updatePayload.tarifId = tarifId;
+
+    const dataDiperbarui = await ElectricityBill.findByIdAndUpdate(
+      id,
+      updatePayload,
+      { returnDocument: 'after', runValidators: true }
+    ).populate('tarifId');
+
+    if (!dataDiperbarui) {
+      return res.status(404).json({
+        status: 'error',
+        message: `Data dengan id ${id} tidak ditemukan`,
+        data: null
+      });
+    }
+
+    res.json({
+      status: 'success',
+      message: 'Data berhasil diperbarui',
+      data: dataDiperbarui
+    });
+  } catch (err) {
+    res.status(400).json({
       status: 'error',
-      message: `Data dengan id ${id} tidak ditemukan`,
+      message: err.message,
       data: null
     });
   }
+});
 
-  const deleted = electricityBills.splice(index, 1);
+// DELETE /electricity-bills/:id -> hapus data (dilindungi dengan cekApiKey)
+app.delete('/electricity-bills/:id', cekApiKey, async (req, res) => {
+  try {
+    const { id } = req.params;
 
-  res.json({
-    status: 'success',
-    message: `Data tagihan listrik dengan id ${id} berhasil dihapus`,
-    data: deleted[0]
-  });
+    if (!isValidObjectId(id)) {
+      return res.status(404).json({
+        status: 'error',
+        message: `Data dengan id ${id} tidak ditemukan`,
+        data: null
+      });
+    }
+
+    const deleted = await ElectricityBill.findByIdAndDelete(id);
+
+    if (!deleted) {
+      return res.status(404).json({
+        status: 'error',
+        message: `Data dengan id ${id} tidak ditemukan`,
+        data: null
+      });
+    }
+
+    res.json({
+      status: 'success',
+      message: `Data tagihan listrik dengan id ${id} berhasil dihapus`,
+      data: deleted
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Gagal menghapus data',
+      error: err.message
+    });
+  }
 });
 
 // Middleware catch-all untuk route yang tidak terdaftar (404 Not Found)
@@ -255,11 +409,20 @@ app.use((req, res) => {
   });
 });
 
-// Jalankan server hanya saat diuji secara lokal
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => {
-    console.log(`Server berjalan di http://localhost:${PORT}`);
+// Koneksi ke MongoDB dan jalankan server
+mongoose
+  .connect(DB_URI)
+  .then(() => {
+    console.log('Terhubung ke MongoDB');
+    if (process.env.NODE_ENV !== 'production') {
+      app.listen(PORT, () => {
+        console.log(`Server berjalan di http://localhost:${PORT}`);
+      });
+    }
+  })
+  .catch((err) => {
+    console.error('Gagal terhubung ke MongoDB:', err.message);
+    process.exit(1);
   });
-}
 
 module.exports = app;
